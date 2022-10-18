@@ -6,6 +6,8 @@ import functools
 import torch
 from ..parameter import Parameter
 import torch.utils.hooks as hooks
+import copy
+import os
 
 from torch import Tensor, device, dtype
 from typing import Union, Tuple, Any, Callable, Iterator, Set, Optional, overload, TypeVar, Mapping, Dict, List
@@ -200,6 +202,40 @@ def _forward_unimplemented(self, *input: Any) -> None:
     """
     raise NotImplementedError
 
+""" layer par """
+RESOURCE_CPU = 1
+RESOURCE_GPU = 2
+
+layer_cnt = 0
+
+# find_module_by_layer_num() 에서 쓰는데 이건 quantization 관련임
+# def assign_layer_num(self, input):
+#     global layer_cnt
+#     self.layer_num = layer_cnt
+#     print(f'layer_cnt: {layer_cnt}')
+#     layer_cnt += 1
+
+def last_fn(self, input, result):
+    req_layer = self._nlayers
+
+    if result.is_cuda:
+        result = result.cpu()
+
+    return result
+
+turn = RESOURCE_CPU
+def sched_resource(self, input):
+    global turn
+    # TODO: [layer par] should change policy
+    self.resource = turn
+    # print(self._get_name())
+    # print(self.resource)
+    # print(self)
+
+    if turn == RESOURCE_CPU:
+        turn = RESOURCE_GPU
+    else:
+        turn = RESOURCE_CPU
 
 class Module:
     r"""Base class for all neural network modules.
@@ -264,6 +300,33 @@ class Module:
         self._state_dict_hooks = OrderedDict()
         self._load_state_dict_pre_hooks = OrderedDict()
         self._modules = OrderedDict()
+
+        """ layer par """
+        self.target_layers = ['Conv2d', 'ReLU', 'MaxPool2d', 'Linear', 'BatchNorm2d', 'AdaptiveAvgPool2d']
+        self._layer_idx = -1
+        self._nlayers = -1
+        self.resource = RESOURCE_CPU
+        self.layer_num = -1
+
+    def count_layers(self):
+        counter = 0
+        for name, module in self.named_modules():
+            if module._get_name() in self.target_layers:
+                module._layer_idx = counter
+                counter += 1
+
+    def register_layerpar_forward_pre_hook(self, fn):
+        for name, module in self.named_modules():
+            if module._get_name() == 'Wrapper':
+                module.register_forward_pre_hook(fn)
+
+
+    def register_layerpar_forward_hook(self, fn):
+        for name, module in self.named_modules():
+            if module._get_name() == 'Wrapper':
+                module.register_forward_hook(fn)
+
+
 
     forward: Callable[..., Any] = _forward_unimplemented
 
@@ -473,6 +536,25 @@ class Module:
             module.apply(fn)
         fn(self)
         return self
+
+    """ layer par """
+    def hetero(self):
+        wrapper_list = torch.nn.modules.laypar.generate_wrapper(self)
+        torch.nn.modules.laypar.swap_modules(self, wrapper_list)
+
+        # self.register_forward_pre_hook(assign_layer_num)
+        # TODO: 수정
+        # lalarand는 여기서 한번 실행한 다음에 inference를 시작하기 때문에 clear 한 것 같음
+        # self.clear_forward_pre_hook()
+
+        self.register_layerpar_forward_pre_hook(sched_resource)
+        # only executed at the last of model
+        self.register_forward_hook(last_fn)
+
+        # sched = os.SCHED_FIFO
+        # priority = os.sched_get_priority_max(os.SCHED_FIFO)
+        # param = os.sched_param(priority)
+        # os.sched_setscheduler(0, sched, param)
 
     def cuda(self: T, device: Optional[Union[int, device]] = None) -> T:
         r"""Moves all model parameters and buffers to the GPU.
@@ -842,6 +924,10 @@ class Module:
         handle = hooks.RemovableHandle(self._forward_hooks)
         self._forward_hooks[handle.id] = hook
         return handle
+
+    """ layer par """
+    def clear_forward_pre_hook(self):
+        self._forward_hooks = OrderedDict()
 
     def _slow_forward(self, *input, **kwargs):
         tracing_state = torch._C._get_tracing_state()

@@ -33,6 +33,7 @@ from .transformer import TransformerEncoder, TransformerDecoder, \
     TransformerEncoderLayer, TransformerDecoderLayer, Transformer
 from .flatten import Flatten, Unflatten
 from .channelshuffle import ChannelShuffle
+from .laypar import Wrapper # layer par
 
 __all__ = [
     'Module', 'Identity', 'Linear', 'Conv1d', 'Conv2d', 'Conv3d', 'ConvTranspose1d',
@@ -58,5 +59,6 @@ __all__ = [
     'TransformerEncoderLayer', 'TransformerDecoderLayer', 'Transformer',
     'LazyLinear', 'LazyConv1d', 'LazyConv2d', 'LazyConv3d',
     'LazyConvTranspose1d', 'LazyConvTranspose2d', 'LazyConvTranspose3d',
-    'Flatten', 'Unflatten', 'Hardsigmoid', 'Hardswish', 'SiLU', 'TripletMarginWithDistanceLoss', 'ChannelShuffle'
+    'Flatten', 'Unflatten', 'Hardsigmoid', 'Hardswish', 'SiLU', 'TripletMarginWithDistanceLoss', 'ChannelShuffle',
+    'Wrapper'   # layer par
 ]
