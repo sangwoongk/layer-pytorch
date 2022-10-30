@@ -9,8 +9,7 @@ import numpy as np
 import time
 import torchvision
 import torchvision.transforms as transforms
-from torchvision.models import resnet18, vgg11, googlenet, mobilenet_v2
-# from resnet import resnet18
+from torchvision.models import *
 
 class CIFAR100Test(Dataset):
   def __init__(self, path, transform=None):
@@ -34,19 +33,35 @@ class CIFAR100Test(Dataset):
     return label, image
 
 """ failed models """
-net = googlenet(pretrained=True)
+# net = googlenet(pretrained=True)
 # net = resnet18(pretrained=True)
+# net = inception_v3(pretrained=True)
 
 """ successful models """
 # net = vgg11(pretrained=True)
 # net = mobilenet_v2(pretrained=True)
+# net = densenet121(pretrained=True)
+# net = squeezenet1_0(pretrained=True)
+# net = mnasnet0_5(pretrained=True)
+# net = shufflenet_v2_x0_5(pretrained=True)
+net = alexnet(pretrained=True)  # add transforms.Resize() to transforms.Compose
 net.eval()
 cifar_path = '/media/bst/hdd1/mirae/pytorch-cifar100/data'
 # imagenet_path = '/media/bst/hdd1/mirae/pytorch-imagenet/data'
-transform_test = transforms.Compose([
-  transforms.ToTensor(),
-  transforms.Normalize(mean=[0.507, 0.486548, 0.44091], std=[0.2673, 0.25643, 0.27615])
-])
+
+if net._get_name() == 'AlexNet':
+  compose_list = [
+    transforms.Resize(224),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.507, 0.486548, 0.44091], std=[0.2673, 0.25643, 0.27615])
+  ]
+else:
+  compose_list = [
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.507, 0.486548, 0.44091], std=[0.2673, 0.25643, 0.27615])
+  ]
+
+transform_test = transforms.Compose(compose_list)
 # test_loader = DataLoader(CIFAR100Test(cifar_path, transform_test))
 cifar_test = torchvision.datasets.CIFAR100(root=cifar_path, train=False, download=False, transform=transform_test)
 # cifar_test = torchvision.datasets.ImageNet(root=imagenet_path, train=False, download=False, transform=transform_test)
@@ -70,7 +85,7 @@ with torch.no_grad():
     start = time.time()
     output = net(image)
     end = time.time()
-    print('bst time: {}'.format(end - start))
+    print('elapsed time: {}'.format(end - start))
     latency.append(end - start)
     _, pred = output.topk(5, 1, largest=True, sorted=True)
 
