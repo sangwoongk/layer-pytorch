@@ -8,6 +8,10 @@ from ..parameter import Parameter
 import torch.utils.hooks as hooks
 import copy
 import os
+import math
+import joblib
+import xgboost as xgb
+import time
 
 from torch import Tensor, device, dtype
 from typing import Union, Tuple, Any, Callable, Iterator, Set, Optional, overload, TypeVar, Mapping, Dict, List
@@ -203,11 +207,6 @@ def _forward_unimplemented(self, *input: Any) -> None:
     raise NotImplementedError
 
 """ layer par """
-RESOURCE_CPU = 1
-RESOURCE_GPU = 2
-
-layer_cnt = 0
-
 # find_module_by_layer_num() 에서 쓰는데 이건 quantization 관련임
 # def assign_layer_num(self, input):
 #     global layer_cnt
@@ -223,19 +222,129 @@ def last_fn(self, input, result):
 
     return result
 
-turn = RESOURCE_CPU
+RESOURCE_CPU = 1
+RESOURCE_GPU = 2
+
+prev_resource = RESOURCE_CPU
+layer_cnt = 0
+predictor = {}
+'''
+[Conv]
+input channel, input width, input height, kernel size, output channel, output width, output height
+
+[ReLU]
+input x, y, z
+
+[MaxPool2d]
+input x, y, z, kernel, stride, padding, dilation
+
+[BatchNorm2d]
+num_features, eps, momentum, input x, y, z
+
+[Linear]
+in_features, out_features
+'''
 def sched_resource(self, input):
-    global turn
+    global predictor, prev_resource
+    module_name = self.name
+    mod = self.cpu_module
+    model_in = []
+    input_shape = list(input[0].size())[1:]
+    cpu_lat = 0.0
+    gpu_lat = 0.0
+    cpu_model = None
+    gpu_model = None
+
+    if module_name == 'Conv2d':
+        kernel_size = mod.kernel_size
+        output_shape = compute_output_shape(input_shape[1:], mod)
+        model_in.extend(input_shape)
+        model_in.append(kernel_size[0])
+        model_in.extend(output_shape)
+
+        cpu_model = predictor['conv']['cpu']
+        gpu_model = predictor['conv']['gpu']
+    elif module_name == 'ReLU':
+        input_len = len(input_shape)
+        model_in.extend(input_shape)
+        for input in range(input_len, 3):
+            model_in.append(1)
+
+        cpu_model = predictor['relu']['cpu']
+        gpu_model = predictor['relu']['gpu']
+    elif module_name == 'MaxPool2d':
+        model_in.extend(input_shape)
+        model_in.append(mod.kernel_size)
+        model_in.append(mod.stride)
+        model_in.append(mod.padding)
+        model_in.append(mod.dilation)
+
+        cpu_model = predictor['maxpool']['cpu']
+        gpu_model = predictor['maxpool']['gpu']
+    elif module_name == 'Linear':
+        model_in.append(mod.in_features)
+        model_in.append(mod.out_features)
+
+        cpu_model = predictor['linear']['cpu']
+        gpu_model = predictor['linear']['gpu']
+    elif module_name == 'BatchNorm2d':
+        model_in.append(mod.num_features)
+        model_in.append(mod.eps)
+        model_in.append(mod.momentum)
+        model_in.extend(input_shape)
+
+        cpu_model = predictor['batchnorm']['cpu']
+        gpu_model = predictor['batchnorm']['gpu']
+    # else:
+        # print(module_name)
+
+    if cpu_model != None and gpu_model != None:
+        # start = time.time()
+        cpu_lat = cpu_model.predict([model_in])
+        # cpu_end = time.time()
+        gpu_lat = gpu_model.predict([model_in])
+        # end = time.time()
+        # print(f'cpu infer lat: {cpu_end - start}\t gpu infer lat: {end - cpu_end}')
+
+    # TODO: have to consider copy overhead
+    if cpu_lat < gpu_lat:
+        self.resource = RESOURCE_CPU
+    elif cpu_lat > gpu_lat:
+        self.resource = RESOURCE_GPU
+    else:
+        # print(f'same latency: {cpu_lat}')
+        self.resource = prev_resource
+
+    prev_resource = self.resource
     # TODO: [layer par] should change policy
-    self.resource = turn
+    # self.resource = turn
     # print(self._get_name())
     # print(self.resource)
-    # print(self)
 
-    if turn == RESOURCE_CPU:
-        turn = RESOURCE_GPU
+
+def compute_output_shape(h_w, layer):
+    dilation = layer.dilation
+    kernel_size = layer.kernel_size
+    stride = layer.stride
+    pad = layer.padding
+
+    if type(dilation) is not tuple:
+        pass
     else:
-        turn = RESOURCE_CPU
+        dilation = dilation[0]
+        stride = stride[0]
+        pad = pad[0]
+
+    if type(kernel_size) is not tuple:
+        kernel_size = (kernel_size, kernel_size)
+    h_out = math.floor(((h_w[0] + (2 * pad) - (dilation * (kernel_size[0] - 1)) - 1) / stride) + 1)
+    w_out = math.floor(((h_w[1] + (2 * pad) - (dilation * (kernel_size[1] - 1)) - 1) / stride) + 1)
+
+    if layer.__class__.__name__ == 'Conv2d':
+        c_out = layer.out_channels
+        return c_out, h_out, w_out
+    elif layer.__class__.__name__ == 'Conv2d':
+        return h_out, w_out
 
 class Module:
     r"""Base class for all neural network modules.
@@ -539,8 +648,21 @@ class Module:
 
     """ layer par """
     def hetero(self):
+        print('--- hetero ---')
+        global predictor
         wrapper_list = torch.nn.modules.laypar.generate_wrapper(self)
         torch.nn.modules.laypar.swap_modules(self, wrapper_list)
+        model_name = 'xgb'
+        layer_type = ['conv', 'linear', 'maxpool', 'relu', 'batchnorm']
+        res_type = ['cpu', 'gpu']
+
+        for layer in layer_type:
+            predictor[layer] = {}
+            for res in res_type:
+                model_path = f'/media/bst/hdd1/mirae/dev-pytorch/laypar_model/{model_name}_{layer}_{res}.json'
+                mod = xgb.XGBRegressor()
+                mod.load_model(model_path)
+                predictor[layer][res] = mod
 
         # self.register_forward_pre_hook(assign_layer_num)
         # TODO: 수정
