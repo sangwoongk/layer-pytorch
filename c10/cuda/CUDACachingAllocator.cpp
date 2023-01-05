@@ -18,6 +18,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include <iostream>
+
 namespace c10 {
 
 C10_DEFINE_REGISTRY(FreeCudaMemoryCallbacksRegistry, FreeMemoryCallback);
@@ -662,7 +664,8 @@ class DeviceCachingAllocator {
       p.err = cudaErrorMemoryAllocation;
       return false;
     } else {
-      p.err = cudaMalloc(&ptr, size);
+      //p.err = cudaMalloc(&ptr, size);
+	  p.err = cudaMallocManaged(&ptr, size);
       if (p.err != cudaSuccess) {
         if (p.err == cudaErrorMemoryAllocation) {
           // If this is the first attempt (!isRetry), we can forgive and clear CUDA's
@@ -838,6 +841,11 @@ class THCCachingAllocator {
     allocated_blocks[block->ptr] = block;
   }
 
+  bool is_recording_prefetch_block = false;
+  uint64_t num_recorded_blocks = 0;
+  uint64_t prefetch_idx = 0;
+  std::deque<Block*> prefetch_block_pool;
+
  public:
 
   std::vector<std::unique_ptr<DeviceCachingAllocator>> device_allocator;
@@ -879,6 +887,10 @@ class THCCachingAllocator {
     Block* block = device_allocator[device]->malloc(device, size, stream);
     add_allocated_block(block);
     *devPtr = (void*)block->ptr;
+	if (is_recording_prefetch_block) {
+		prefetch_block_pool.push_back(block);
+		num_recorded_blocks += 1;
+	}
   }
 
   void free(void* ptr) {
@@ -957,7 +969,37 @@ class THCCachingAllocator {
 
     return result;
   }
-};
+
+  void set_prefetch_flag() {
+    TORCH_INTERNAL_ASSERT(!is_recording_prefetch_block);
+    is_recording_prefetch_block = true;
+  }
+
+  uint64_t unset_prefetch_flag() {
+    TORCH_INTERNAL_ASSERT(is_recording_prefetch_block);
+    is_recording_prefetch_block = false;
+    uint64_t res = num_recorded_blocks;
+    num_recorded_blocks = 0;
+    return res;
+  }
+
+  void prefetch_block_async(cuda::CUDAStream stream, uint64_t num_blocks_to_prefetch) {
+    TORCH_INTERNAL_ASSERT(!is_recording_prefetch_block);
+    TORCH_INTERNAL_ASSERT(prefetch_block_pool.size() >= prefetch_idx + num_blocks_to_prefetch);
+    for (int i = prefetch_idx; i < prefetch_idx + num_blocks_to_prefetch; i++) {
+      Block* block = prefetch_block_pool.at(i);
+	  if (stream.stream() != block->stream) {
+		block->stream_uses.insert(stream);
+	  }
+      cudaMemPrefetchAsync(block->ptr, block->size, block->device, stream.stream());
+    }
+    prefetch_idx += num_blocks_to_prefetch;
+  }
+  void clear_prefetch_idx() {
+	TORCH_INTERNAL_ASSERT(!is_recording_prefetch_block);
+	prefetch_idx = 0;
+  }
+ };
 
 THCCachingAllocator caching_allocator;
 
@@ -983,7 +1025,8 @@ struct CudaCachingAllocator : public Allocator {
     C10_CUDA_CHECK(cudaGetDevice(&device));
     void* r = nullptr;
     if (forceUncachedAllocator()) {
-      C10_CUDA_CHECK(cudaMalloc(&r, size));
+      //C10_CUDA_CHECK(cudaMalloc(&r, size));
+	  C10_CUDA_CHECK(cudaMallocManaged(&r, size));
       return {r, r, &uncached_delete, Device(DeviceType::CUDA, device)};
     }
     if (size != 0) {
@@ -1136,6 +1179,23 @@ void* raw_alloc_with_stream(size_t nbytes, cudaStream_t stream) {
 
 void raw_delete(void* ptr) {
   caching_allocator.free(ptr);
+}
+
+void set_prefetch_flag() {
+	caching_allocator.set_prefetch_flag();
+}
+
+uint64_t unset_prefetch_flag() {
+	uint64_t num_allocated_blocks = caching_allocator.unset_prefetch_flag();
+	return num_allocated_blocks;
+}
+
+void prefetch_block_async(cuda::CUDAStream stream, uint64_t num_blocks_to_prefetch) {
+	caching_allocator.prefetch_block_async(stream, num_blocks_to_prefetch);
+}
+
+void clear_prefetch_idx(){
+	caching_allocator.clear_prefetch_idx();
 }
 
 } // namespace CUDACachingAllocator

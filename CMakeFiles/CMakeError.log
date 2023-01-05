@@ -1,0 +1,279 @@
+Performing C++ SOURCE FILE Test CAFFE2_NEED_TO_TURN_OFF_DEPRECATION_WARNING failed with the following output:
+Change Dir: /home/kh/layer-pytorch/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_dc0e2/fast && /usr/bin/make -f CMakeFiles/cmTC_dc0e2.dir/build.make CMakeFiles/cmTC_dc0e2.dir/build
+make[1]: Entering directory '/home/kh/layer-pytorch/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_dc0e2.dir/src.cxx.o
+/usr/bin/c++    -DCAFFE2_NEED_TO_TURN_OFF_DEPRECATION_WARNING -std=c++14   -o CMakeFiles/cmTC_dc0e2.dir/src.cxx.o -c /home/kh/layer-pytorch/CMakeFiles/CMakeTmp/src.cxx
+/home/kh/layer-pytorch/CMakeFiles/CMakeTmp/src.cxx:1:10: fatal error: glog/stl_logging.h: No such file or directory
+    1 | #include <glog/stl_logging.h>
+      |          ^~~~~~~~~~~~~~~~~~~~
+compilation terminated.
+make[1]: *** [CMakeFiles/cmTC_dc0e2.dir/build.make:66: CMakeFiles/cmTC_dc0e2.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/kh/layer-pytorch/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_dc0e2/fast] Error 2
+
+
+Source file was:
+#include <glog/stl_logging.h>
+    int main(int argc, char** argv) {
+      return 0;
+    }
+Performing C SOURCE FILE Test CMAKE_HAVE_LIBC_PTHREAD failed with the following output:
+Change Dir: /home/kh/layer-pytorch/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_27d8a/fast && /usr/bin/make -f CMakeFiles/cmTC_27d8a.dir/build.make CMakeFiles/cmTC_27d8a.dir/build
+make[1]: Entering directory '/home/kh/layer-pytorch/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_27d8a.dir/src.c.o
+/usr/bin/cc   -DCMAKE_HAVE_LIBC_PTHREAD -fPIE   -o CMakeFiles/cmTC_27d8a.dir/src.c.o   -c /home/kh/layer-pytorch/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_27d8a
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_27d8a.dir/link.txt --verbose=1
+/usr/bin/cc  -DCMAKE_HAVE_LIBC_PTHREAD   -rdynamic  CMakeFiles/cmTC_27d8a.dir/src.c.o  -o cmTC_27d8a 
+/usr/bin/ld: CMakeFiles/cmTC_27d8a.dir/src.c.o: in function `main':
+src.c:(.text+0x46): undefined reference to `pthread_create'
+/usr/bin/ld: src.c:(.text+0x52): undefined reference to `pthread_detach'
+/usr/bin/ld: src.c:(.text+0x63): undefined reference to `pthread_join'
+collect2: error: ld returned 1 exit status
+make[1]: *** [CMakeFiles/cmTC_27d8a.dir/build.make:87: cmTC_27d8a] Error 1
+make[1]: Leaving directory '/home/kh/layer-pytorch/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_27d8a/fast] Error 2
+
+
+Source file was:
+#include <pthread.h>
+
+void* test_func(void* data)
+{
+  return data;
+}
+
+int main(void)
+{
+  pthread_t thread;
+  pthread_create(&thread, NULL, test_func, NULL);
+  pthread_detach(thread);
+  pthread_join(thread, NULL);
+  pthread_atfork(NULL, NULL, NULL);
+  pthread_exit(NULL);
+
+  return 0;
+}
+
+The MPI test test_mpi for C in mode normal failed to compile with the following output:
+Change Dir: /home/kh/layer-pytorch/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_f4c8b/fast && /usr/bin/make -f CMakeFiles/cmTC_f4c8b.dir/build.make CMakeFiles/cmTC_f4c8b.dir/build
+make[1]: Entering directory '/home/kh/layer-pytorch/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_f4c8b.dir/test_mpi.c.o
+/usr/bin/cc   -fPIE   -o CMakeFiles/cmTC_f4c8b.dir/test_mpi.c.o   -c /usr/share/cmake-3.16/Modules/FindMPI/test_mpi.c
+/usr/share/cmake-3.16/Modules/FindMPI/test_mpi.c:1:10: fatal error: mpi.h: No such file or directory
+    1 | #include <mpi.h>
+      |          ^~~~~~~
+compilation terminated.
+make[1]: *** [CMakeFiles/cmTC_f4c8b.dir/build.make:66: CMakeFiles/cmTC_f4c8b.dir/test_mpi.c.o] Error 1
+make[1]: Leaving directory '/home/kh/layer-pytorch/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_f4c8b/fast] Error 2
+
+
+
+The MPI test test_mpi for CXX in mode normal failed to compile with the following output:
+Change Dir: /home/kh/layer-pytorch/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_a8be7/fast && /usr/bin/make -f CMakeFiles/cmTC_a8be7.dir/build.make CMakeFiles/cmTC_a8be7.dir/build
+make[1]: Entering directory '/home/kh/layer-pytorch/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_a8be7.dir/test_mpi.cpp.o
+/usr/bin/c++    -Wno-deprecated -fvisibility-inlines-hidden -fvisibility=hidden -fvisibility-inlines-hidden -fvisibility=hidden -fvisibility-inlines-hidden -DUSE_PTHREADPOOL  -fPIE   -o CMakeFiles/cmTC_a8be7.dir/test_mpi.cpp.o -c /home/kh/layer-pytorch/CMakeFiles/FindMPI/test_mpi.cpp
+/home/kh/layer-pytorch/CMakeFiles/FindMPI/test_mpi.cpp:1:10: fatal error: mpi.h: No such file or directory
+    1 | #include <mpi.h>
+      |          ^~~~~~~
+compilation terminated.
+make[1]: *** [CMakeFiles/cmTC_a8be7.dir/build.make:66: CMakeFiles/cmTC_a8be7.dir/test_mpi.cpp.o] Error 1
+make[1]: Leaving directory '/home/kh/layer-pytorch/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_a8be7/fast] Error 2
+
+
+
+Performing C SOURCE FILE Test C_VSX_FOUND failed with the following output:
+Change Dir: /home/kh/layer-pytorch/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_33b7e/fast && /usr/bin/make -f CMakeFiles/cmTC_33b7e.dir/build.make CMakeFiles/cmTC_33b7e.dir/build
+make[1]: Entering directory '/home/kh/layer-pytorch/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_33b7e.dir/src.c.o
+/usr/bin/cc   -fopenmp -DNDEBUG -DC_VSX_FOUND -mvsx -fPIE   -o CMakeFiles/cmTC_33b7e.dir/src.c.o   -c /home/kh/layer-pytorch/CMakeFiles/CMakeTmp/src.c
+cc: error: unrecognized command line option ‘-mvsx’
+make[1]: *** [CMakeFiles/cmTC_33b7e.dir/build.make:66: CMakeFiles/cmTC_33b7e.dir/src.c.o] Error 1
+make[1]: Leaving directory '/home/kh/layer-pytorch/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_33b7e/fast] Error 2
+
+
+Source file was:
+ #include <altivec.h> 
+      int main() {
+      float __attribute__((aligned(16))) vptr_y[8]   = { 1.0f,2.f,3.f,4.f,4.f,3.f,2.f,1.f };
+      __vector float v_result = vec_add(vec_vsx_ld(0, vptr_y), vec_vsx_ld(16, vptr_y));
+      return 0;
+      }
+Performing C++ SOURCE FILE Test CXX_VSX_FOUND failed with the following output:
+Change Dir: /home/kh/layer-pytorch/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_6be58/fast && /usr/bin/make -f CMakeFiles/cmTC_6be58.dir/build.make CMakeFiles/cmTC_6be58.dir/build
+make[1]: Entering directory '/home/kh/layer-pytorch/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_6be58.dir/src.cxx.o
+/usr/bin/c++    -Wno-deprecated -fvisibility-inlines-hidden -fvisibility=hidden -fvisibility-inlines-hidden -fvisibility=hidden -fvisibility-inlines-hidden -DUSE_PTHREADPOOL -fopenmp -DNDEBUG -DCXX_VSX_FOUND -mvsx -fPIE   -o CMakeFiles/cmTC_6be58.dir/src.cxx.o -c /home/kh/layer-pytorch/CMakeFiles/CMakeTmp/src.cxx
+c++: error: unrecognized command line option ‘-mvsx’
+make[1]: *** [CMakeFiles/cmTC_6be58.dir/build.make:66: CMakeFiles/cmTC_6be58.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/kh/layer-pytorch/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_6be58/fast] Error 2
+
+
+Source file was:
+ #include <altivec.h> 
+      int main() {
+      float __attribute__((aligned(16))) vptr_y[8]   = { 1.0f,2.f,3.f,4.f,4.f,3.f,2.f,1.f };
+      __vector float v_result = vec_add(vec_vsx_ld(0, vptr_y), vec_vsx_ld(16, vptr_y));
+      return 0;
+      }
+Performing C SOURCE FILE Test C_HAS_AVX_1 failed with the following output:
+Change Dir: /home/kh/layer-pytorch/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_5036a/fast && /usr/bin/make -f CMakeFiles/cmTC_5036a.dir/build.make CMakeFiles/cmTC_5036a.dir/build
+make[1]: Entering directory '/home/kh/layer-pytorch/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_5036a.dir/src.c.o
+/usr/bin/cc   -fopenmp -DNDEBUG -DC_HAS_AVX_1 -fPIE   -o CMakeFiles/cmTC_5036a.dir/src.c.o   -c /home/kh/layer-pytorch/CMakeFiles/CMakeTmp/src.c
+/home/kh/layer-pytorch/CMakeFiles/CMakeTmp/src.c: In function ‘main’:
+/home/kh/layer-pytorch/CMakeFiles/CMakeTmp/src.c:7:7: warning: AVX vector return without AVX enabled changes the ABI [-Wpsabi]
+    7 |     a = _mm256_set1_ps(0);
+      |     ~~^~~~~~~~~~~~~~~~~~~
+In file included from /usr/lib/gcc/x86_64-linux-gnu/9/include/immintrin.h:51,
+                 from /home/kh/layer-pytorch/CMakeFiles/CMakeTmp/src.c:2:
+/usr/lib/gcc/x86_64-linux-gnu/9/include/avxintrin.h:1311:1: error: inlining failed in call to always_inline ‘_mm256_set1_ps’: target specific option mismatch
+ 1311 | _mm256_set1_ps (float __A)
+      | ^~~~~~~~~~~~~~
+/home/kh/layer-pytorch/CMakeFiles/CMakeTmp/src.c:7:9: note: called from here
+    7 |     a = _mm256_set1_ps(0);
+      |         ^~~~~~~~~~~~~~~~~
+make[1]: *** [CMakeFiles/cmTC_5036a.dir/build.make:66: CMakeFiles/cmTC_5036a.dir/src.c.o] Error 1
+make[1]: Leaving directory '/home/kh/layer-pytorch/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_5036a/fast] Error 2
+
+
+Source file was:
+
+  #include <immintrin.h>
+
+  int main()
+  {
+    __m256 a;
+    a = _mm256_set1_ps(0);
+    return 0;
+  }
+
+Performing C SOURCE FILE Test C_HAS_AVX2_1 failed with the following output:
+Change Dir: /home/kh/layer-pytorch/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_bfe4e/fast && /usr/bin/make -f CMakeFiles/cmTC_bfe4e.dir/build.make CMakeFiles/cmTC_bfe4e.dir/build
+make[1]: Entering directory '/home/kh/layer-pytorch/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_bfe4e.dir/src.c.o
+/usr/bin/cc   -fopenmp -DNDEBUG -DC_HAS_AVX2_1 -fPIE   -o CMakeFiles/cmTC_bfe4e.dir/src.c.o   -c /home/kh/layer-pytorch/CMakeFiles/CMakeTmp/src.c
+/home/kh/layer-pytorch/CMakeFiles/CMakeTmp/src.c: In function ‘main’:
+/home/kh/layer-pytorch/CMakeFiles/CMakeTmp/src.c:7:7: warning: AVX vector return without AVX enabled changes the ABI [-Wpsabi]
+    7 |     a = _mm256_abs_epi16(a);
+      |     ~~^~~~~~~~~~~~~~~~~~~~~
+In file included from /usr/lib/gcc/x86_64-linux-gnu/9/include/immintrin.h:53,
+                 from /home/kh/layer-pytorch/CMakeFiles/CMakeTmp/src.c:2:
+/usr/lib/gcc/x86_64-linux-gnu/9/include/avx2intrin.h:63:1: error: inlining failed in call to always_inline ‘_mm256_abs_epi16’: target specific option mismatch
+   63 | _mm256_abs_epi16 (__m256i __A)
+      | ^~~~~~~~~~~~~~~~
+/home/kh/layer-pytorch/CMakeFiles/CMakeTmp/src.c:7:9: note: called from here
+    7 |     a = _mm256_abs_epi16(a);
+      |         ^~~~~~~~~~~~~~~~~~~
+make[1]: *** [CMakeFiles/cmTC_bfe4e.dir/build.make:66: CMakeFiles/cmTC_bfe4e.dir/src.c.o] Error 1
+make[1]: Leaving directory '/home/kh/layer-pytorch/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_bfe4e/fast] Error 2
+
+
+Source file was:
+
+  #include <immintrin.h>
+
+  int main()
+  {
+    __m256i a = {0};
+    a = _mm256_abs_epi16(a);
+    __m256i x;
+    _mm256_extract_epi64(x, 0); // we rely on this in our AVX2 code
+    return 0;
+  }
+
+Performing C SOURCE FILE Test CXX_HAS_AVX_1 failed with the following output:
+Change Dir: /home/kh/layer-pytorch/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_e5964/fast && /usr/bin/make -f CMakeFiles/cmTC_e5964.dir/build.make CMakeFiles/cmTC_e5964.dir/build
+make[1]: Entering directory '/home/kh/layer-pytorch/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_e5964.dir/src.c.o
+/usr/bin/cc   -fopenmp -DNDEBUG -DCXX_HAS_AVX_1 -fPIE   -o CMakeFiles/cmTC_e5964.dir/src.c.o   -c /home/kh/layer-pytorch/CMakeFiles/CMakeTmp/src.c
+/home/kh/layer-pytorch/CMakeFiles/CMakeTmp/src.c: In function ‘main’:
+/home/kh/layer-pytorch/CMakeFiles/CMakeTmp/src.c:7:7: warning: AVX vector return without AVX enabled changes the ABI [-Wpsabi]
+    7 |     a = _mm256_set1_ps(0);
+      |     ~~^~~~~~~~~~~~~~~~~~~
+In file included from /usr/lib/gcc/x86_64-linux-gnu/9/include/immintrin.h:51,
+                 from /home/kh/layer-pytorch/CMakeFiles/CMakeTmp/src.c:2:
+/usr/lib/gcc/x86_64-linux-gnu/9/include/avxintrin.h:1311:1: error: inlining failed in call to always_inline ‘_mm256_set1_ps’: target specific option mismatch
+ 1311 | _mm256_set1_ps (float __A)
+      | ^~~~~~~~~~~~~~
+/home/kh/layer-pytorch/CMakeFiles/CMakeTmp/src.c:7:9: note: called from here
+    7 |     a = _mm256_set1_ps(0);
+      |         ^~~~~~~~~~~~~~~~~
+make[1]: *** [CMakeFiles/cmTC_e5964.dir/build.make:66: CMakeFiles/cmTC_e5964.dir/src.c.o] Error 1
+make[1]: Leaving directory '/home/kh/layer-pytorch/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_e5964/fast] Error 2
+
+
+Source file was:
+
+  #include <immintrin.h>
+
+  int main()
+  {
+    __m256 a;
+    a = _mm256_set1_ps(0);
+    return 0;
+  }
+
+Performing C SOURCE FILE Test CXX_HAS_AVX2_1 failed with the following output:
+Change Dir: /home/kh/layer-pytorch/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_56026/fast && /usr/bin/make -f CMakeFiles/cmTC_56026.dir/build.make CMakeFiles/cmTC_56026.dir/build
+make[1]: Entering directory '/home/kh/layer-pytorch/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_56026.dir/src.c.o
+/usr/bin/cc   -fopenmp -DNDEBUG -DCXX_HAS_AVX2_1 -fPIE   -o CMakeFiles/cmTC_56026.dir/src.c.o   -c /home/kh/layer-pytorch/CMakeFiles/CMakeTmp/src.c
+/home/kh/layer-pytorch/CMakeFiles/CMakeTmp/src.c: In function ‘main’:
+/home/kh/layer-pytorch/CMakeFiles/CMakeTmp/src.c:7:7: warning: AVX vector return without AVX enabled changes the ABI [-Wpsabi]
+    7 |     a = _mm256_abs_epi16(a);
+      |     ~~^~~~~~~~~~~~~~~~~~~~~
+In file included from /usr/lib/gcc/x86_64-linux-gnu/9/include/immintrin.h:53,
+                 from /home/kh/layer-pytorch/CMakeFiles/CMakeTmp/src.c:2:
+/usr/lib/gcc/x86_64-linux-gnu/9/include/avx2intrin.h:63:1: error: inlining failed in call to always_inline ‘_mm256_abs_epi16’: target specific option mismatch
+   63 | _mm256_abs_epi16 (__m256i __A)
+      | ^~~~~~~~~~~~~~~~
+/home/kh/layer-pytorch/CMakeFiles/CMakeTmp/src.c:7:9: note: called from here
+    7 |     a = _mm256_abs_epi16(a);
+      |         ^~~~~~~~~~~~~~~~~~~
+make[1]: *** [CMakeFiles/cmTC_56026.dir/build.make:66: CMakeFiles/cmTC_56026.dir/src.c.o] Error 1
+make[1]: Leaving directory '/home/kh/layer-pytorch/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_56026/fast] Error 2
+
+
+Source file was:
+
+  #include <immintrin.h>
+
+  int main()
+  {
+    __m256i a = {0};
+    a = _mm256_abs_epi16(a);
+    __m256i x;
+    _mm256_extract_epi64(x, 0); // we rely on this in our AVX2 code
+    return 0;
+  }
+
