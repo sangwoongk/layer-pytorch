@@ -52,23 +52,31 @@ class CIFAR100Test(Dataset):
 net = None
 if exec_model == 'vgg':
   net = vgg19(pretrained=True)
+  net1 = vgg19(pretrained=True)
 elif exec_model == 'mobi':
   net = mobilenet_v2(pretrained=True)
+  net1 = mobilenet_v2(pretrained=True)
 elif exec_model == 'dense':
   net = densenet121(pretrained=True)
+  net1 = densenet121(pretrained=True)
 elif exec_model == 'squeeze':
   net = squeezenet1_0(pretrained=True)
+  net1 = squeezenet1_0(pretrained=True)
 elif exec_model == 'mnas':
   net = mnasnet0_5(pretrained=True)
+  net1 = mnasnet0_5(pretrained=True)
 elif exec_model == 'shuffle':
   net = shufflenet_v2_x0_5(pretrained=True)
+  net1 = shufflenet_v2_x0_5(pretrained=True)
 elif exec_model == 'alex':
   net = alexnet(pretrained=True)  # add transforms.Resize() to transforms.Compose
+  net1 = alexnet(pretrained=True)  # add transforms.Resize() to transforms.Compose
 else:
   print('Enter correct model name!')
   exit(1)
 
 net.eval()
+net1.eval()
 cifar_path = '/media/bst/hdd/mirae/layer-par/pytorch-cifar100/data'
 # imagenet_path = '/media/bst/hdd1/mirae/pytorch-imagenet/data'
 
@@ -95,21 +103,29 @@ correct_5 = 0.0
 latency = []
 
 with torch.no_grad():
-  if exec_on_gpu:
-    net.to('cuda:0')
-  else:
-    net.hetero()
+  #if exec_on_gpu:
+  net.to('cuda:0')
+  net1.to('cpu')
+  #else:
+  #  net.hetero()
 
   for n_iter, (image, label) in enumerate(test_loader):
     # print('iteration: {}\ttotal {} iterations'.format(n_iter, len(test_loader)))
 
     # for gpu-only execution
-    if exec_on_gpu:
-      image = image.cuda()
-      label = label.cuda()
+    # if exec_on_gpu:
+    image = image.cuda()
+    label = label.cuda()
 
     start = time.time()
     output = net(image)
+    end = time.time()
+
+    if n_iter % 100 == 0:
+      print('iteration: {}\telapsed time: {}'.format(n_iter, end - start))
+
+    start = time.time()
+    output = net1(image)
     end = time.time()
 
     if n_iter % 100 == 0:

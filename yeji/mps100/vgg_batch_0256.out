@@ -1,0 +1,7 @@
+--- hetero ---
+iteration: 0	elapsed time: 1.7515332698822021
+==== hetero() ====
+==== model: VGG ====
+Average latency: 0.939619168257102
+Median latency: 0.9415111541748047
+P99 latency: 1.1240998315811157

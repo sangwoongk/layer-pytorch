@@ -9,8 +9,8 @@ import torch.utils.hooks as hooks
 import copy
 import os
 import math
-import joblib
-import xgboost as xgb
+#import joblib
+#import xgboost as xgb
 import time
 
 from torch import Tensor, device, dtype
@@ -228,6 +228,18 @@ RESOURCE_GPU = 2
 prev_resource = RESOURCE_CPU
 layer_cnt = 0
 predictor = {}
+
+turn = RESOURCE_CPU
+
+def khryu(self, input):
+    global turn
+    self.resource = turn
+
+    if turn == RESOURCE_CPU:
+        turn = RESOURCE_GPU
+    else:
+        turn = RESOURCE_CPU 
+
 '''
 [Conv]
 input channel, input width, input height, kernel size, output channel, output width, output height
@@ -656,6 +668,7 @@ class Module:
         layer_type = ['conv', 'linear', 'maxpool', 'relu', 'batchnorm']
         res_type = ['cpu', 'gpu']
 
+        """
         for layer in layer_type:
             predictor[layer] = {}
             for res in res_type:
@@ -663,13 +676,15 @@ class Module:
                 mod = xgb.XGBRegressor()
                 mod.load_model(model_path)
                 predictor[layer][res] = mod
+        """
 
         # self.register_forward_pre_hook(assign_layer_num)
         # TODO: 수정
         # lalarand는 여기서 한번 실행한 다음에 inference를 시작하기 때문에 clear 한 것 같음
         # self.clear_forward_pre_hook()
 
-        self.register_layerpar_forward_pre_hook(sched_resource)
+        #self.register_layerpar_forward_pre_hook(sched_resource)
+        self.register_layerpar_forward_pre_hook(khryu)
         # only executed at the last of model
         self.register_forward_hook(last_fn)
 

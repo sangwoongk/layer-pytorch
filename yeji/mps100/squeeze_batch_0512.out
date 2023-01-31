@@ -1,0 +1,7 @@
+--- hetero ---
+iteration: 0	elapsed time: 1.377948522567749
+==== hetero() ====
+==== model: SqueezeNet ====
+Average latency: 0.5546378963872006
+Median latency: 0.5308213233947754
+P99 latency: 0.6567280435562134

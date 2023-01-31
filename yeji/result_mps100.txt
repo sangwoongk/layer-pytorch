@@ -1,0 +1,44 @@
+yeji/mps100/squeeze
+
+yeji/mps100/squeeze_batch_0100.out
+Average latency: 0.10324282838840677
+Median latency: 0.10907483100891113
+P99 latency: 0.14389246463775632
+
+yeji/mps100/squeeze_batch_0256.out
+Average latency: 0.2222290528126252
+Median latency: 0.2184450626373291
+P99 latency: 0.2869453001022338
+
+yeji/mps100/squeeze_batch_0512.out
+Average latency: 0.5546378963872006
+Median latency: 0.5308213233947754
+P99 latency: 0.6567280435562134
+
+yeji/mps100/squeeze_batch_1024.out
+Average latency: 1.0361929204728868
+Median latency: 1.0336945056915283
+P99 latency: 1.2921155071258545
+
+yeji/mps100/vgg
+
+yeji/mps100/vgg_batch_0100.out
+Average latency: 0.33982233326844496
+Median latency: 0.3358898162841797
+P99 latency: 0.4048763370513916
+
+yeji/mps100/vgg_batch_0256.out
+Average latency: 0.939619168257102
+Median latency: 0.9415111541748047
+P99 latency: 1.1240998315811157
+
+yeji/mps100/vgg_batch_0512.out
+Average latency: 1.8378264904022217
+Median latency: 1.8695242404937744
+P99 latency: 2.0572223377227785
+
+yeji/mps100/vgg_batch_1024.out
+Average latency: 3.6350484953986273
+Median latency: 3.7333920001983643
+P99 latency: 3.9192232704162597
+
