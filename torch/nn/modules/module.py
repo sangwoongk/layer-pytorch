@@ -217,8 +217,13 @@ def _forward_unimplemented(self, *input: Any) -> None:
 def last_fn(self, input, result):
     req_layer = self._nlayers
 
+    '''
     if result.is_cuda:
+        start = time.time()
         result = result.cpu()
+        end = time.time()
+        print(f'last_fn copy latency: {(end - start)*1000}ms')
+    '''
 
     return result
 
@@ -229,16 +234,89 @@ prev_resource = RESOURCE_CPU
 layer_cnt = 0
 predictor = {}
 
+# for CPU/GPU contention eval
 turn = RESOURCE_CPU
+# turn = RESOURCE_GPU
+
+# sched_arr = [13, 35, 43]
+maxpool_cnt = 0
+conv_cnt_3 = 0
+conv_cnt_4 = 0
 
 def khryu(self, input):
     global turn
-    self.resource = turn
+    global maxpool_cnt
+    global conv_cnt_3
+    global conv_cnt_4
+    '''
+    # MPS 20, batch size 128, VGG-19
+    maxpool = [3, 5]
 
+    if maxpool_cnt < maxpool[0]:
+        self.resource = RESOURCE_GPU
+    elif maxpool_cnt < maxpool[1]:
+        if maxpool_cnt == maxpool[1] - 1 and self.name == 'MaxPool2d':
+            self.resource = RESOURCE_GPU
+        else:
+            self.resource = RESOURCE_CPU
+    else:
+        self.resource = RESOURCE_GPU
+
+    if self.name == 'MaxPool2d':
+        maxpool_cnt += 1
+
+    if self.name == 'Linear':
+        maxpool_cnt = 0
+    '''
+
+    '''
+    # MPS 40, batch size 256, VGG-19
+    if maxpool_cnt == 3:
+        if self.name == 'Conv2d':
+            conv_cnt_3 += 1
+
+        if conv_cnt_3 > 3:
+            self.resource = RESOURCE_CPU
+        else:
+            self.resource = RESOURCE_GPU
+    elif maxpool_cnt == 4:
+        if self.name == 'Conv2d':
+            conv_cnt_4 += 1
+
+        if conv_cnt_4 < 4:
+            self.resource = RESOURCE_CPU
+        elif conv_cnt_4 == 4:
+            if self.name == 'Conv2d':
+                self.resource = RESOURCE_CPU
+            else:
+                self.resource = RESOURCE_GPU
+    else:
+        self.resource = RESOURCE_GPU
+
+    if self.name == 'MaxPool2d':
+        maxpool_cnt += 1
+
+    if self.name == 'Linear':
+        maxpool_cnt = 0
+        conv_cnt_3 = 0
+        conv_cnt_4 = 0
+
+    '''
+    # print(f'{self.name}: {self.resource}')
+
+    # copy overhead test
+    if self._layer_idx % 2 == 1:
+        self.resource = RESOURCE_CPU
+    else:
+        self.resource = RESOURCE_GPU
+
+    # self.resource = turn
+    '''
     if turn == RESOURCE_CPU:
         turn = RESOURCE_GPU
     else:
         turn = RESOURCE_CPU 
+    '''
 
 '''
 [Conv]
@@ -428,6 +506,7 @@ class Module:
         self._nlayers = -1
         self.resource = RESOURCE_CPU
         self.layer_num = -1
+        self.sched_map = {}
 
     def count_layers(self):
         counter = 0
@@ -687,11 +766,16 @@ class Module:
         self.register_layerpar_forward_pre_hook(khryu)
         # only executed at the last of model
         self.register_forward_hook(last_fn)
+        self.count_layers() # generate _layer_idx
 
         # sched = os.SCHED_FIFO
         # priority = os.sched_get_priority_max(os.SCHED_FIFO)
         # param = os.sched_param(priority)
         # os.sched_setscheduler(0, sched, param)
+
+    def sched_layer(self, layer_map):
+        print(f'sched_layer() called! {layer_map}')
+        self.sched_map = layer_map
 
     def cuda(self: T, device: Optional[Union[int, device]] = None) -> T:
         r"""Moves all model parameters and buffers to the GPU.

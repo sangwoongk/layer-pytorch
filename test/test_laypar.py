@@ -88,7 +88,8 @@ transform_test = transforms.Compose(compose_list)
 # test_loader = DataLoader(CIFAR100Test(cifar_path, transform_test))
 cifar_test = torchvision.datasets.CIFAR100(root=cifar_path, train=False, download=False, transform=transform_test)
 # cifar_test = torchvision.datasets.ImageNet(root=imagenet_path, train=False, download=False, transform=transform_test)
-test_loader = DataLoader(cifar_test, shuffle=True, batch_size=100)
+test_loader = DataLoader(cifar_test, shuffle=True, batch_size=256)
+# test_loader = DataLoader(cifar_test, shuffle=True)
 
 correct_1 = 0.0
 correct_5 = 0.0
@@ -100,6 +101,7 @@ with torch.no_grad():
   else:
     net.hetero()
 
+  print(f'total iterations: {len(test_loader)}')
   for n_iter, (image, label) in enumerate(test_loader):
     # print('iteration: {}\ttotal {} iterations'.format(n_iter, len(test_loader)))
 
@@ -107,17 +109,35 @@ with torch.no_grad():
     if exec_on_gpu:
       image = image.cuda()
       label = label.cuda()
+    else:
+      image = image.cuda()
+      label = label.cuda()
+
+    # net.sched_layer({})
 
     start = time.time()
     output = net(image)
     end = time.time()
+    lat = (end - start) * 1000
 
-    if n_iter % 100 == 0:
-      print('iteration: {}\telapsed time: {}'.format(n_iter, end - start))
+    out_location = output.get_device()
+    img_location = image.get_device()
+    label_location = label.get_device()
+
+    if out_location >= 0:
+      output = output.cpu()
+    if img_location >= 0:
+      image = image.cpu()
+    if label_location >= 0:
+      label = label.cpu()
+
+    # print('iteration: {}\telapsed time: {}ms'.format(n_iter, lat))
+    # if n_iter % 100 == 0:
+    #   print('iteration: {}\telapsed time: {}ms'.format(n_iter, lat))
 
     # first latency is high -> exclude
     if n_iter != 0:
-      latency.append(end - start)
+      latency.append(lat)
       _, pred = output.topk(5, 1, largest=True, sorted=True)
 
       label = label.view(label.size(0), -1).expand_as(pred)
@@ -125,6 +145,9 @@ with torch.no_grad():
 
       correct_5 += correct[:, :5].sum()
       correct_1 += correct[:, :1].sum()
+
+    if n_iter == 50:
+      break
 
     #if n_iter == inference_iter:
     #  break
@@ -138,9 +161,10 @@ print(f'==== model: {net._get_name()} ====')
 print('Top 1 err: ', 1 - correct_1 / len(test_loader.dataset))
 print('Top 5 err: ', 1 - correct_5 / len(test_loader.dataset))
 '''
-print('Average latency: {}'.format(np.average(latency)))
-print('Median latency: {}'.format(np.median(latency)))
-print('P99 latency: {}'.format(np.percentile(latency, 99)))
+print('Average latency: {}ms'.format(np.average(latency)))
+print('Median latency: {}ms'.format(np.median(latency)))
+print('P95 latency: {}ms'.format(np.percentile(latency, 95)))
+print('P99 latency: {}ms'.format(np.percentile(latency, 99)))
 # print('Parameter numbers: {}'.format(sum(p.numel() for p in net.parameters())))
 
 

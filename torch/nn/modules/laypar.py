@@ -56,12 +56,13 @@ class Wrapper(Module):
         self.name = name
         self.gpu_module = None
         self.cpu_module = None
-        self.cpu_copy_time =[]# bst
-        self.gpu_forard_time=[]# bst
-        self.gpu_copy_time =[]# bst
-        self.cpu_forard_time=[]# bst
-        self.input_size=0#bst
-        self.count=0
+
+        self.cpu_copy_time = [] # bst
+        self.gpu_forward_time = []  # bst
+        self.gpu_copy_time = [] # bst
+        self.cpu_forward_time = []  # bst
+        self.input_size = 0 #bst
+        self.count = 0
 
     def set_gpu_module(self, mod):
         mod = copy.deepcopy(mod)
@@ -113,25 +114,103 @@ class Wrapper(Module):
         result = self._cat(x, dim)
         return result
 
+    # '''
     def forward(self, input):
-        # print(self)
-        """
+        out = None
         resource = self.resource
 
         if not input.is_cuda and resource == RESOURCE_GPU:
+            start = time.time()
+
             input = input.cuda()
+
+            self.gpu_copy_time.append(time.time() - start)
         if input.is_cuda and resource == RESOURCE_CPU:
+            start = time.time()
+
             input = input.cpu()
 
+            self.cpu_copy_time.append(time.time() - start)
+
         if resource == RESOURCE_CPU:
+            start = time.time()
+
             out = self.cpu_module(input)
-            return out
+
+            self.cpu_forward_time.append(time.time() - start)
+            # return out
         elif resource == RESOURCE_GPU:
+            start = time.time()
+
             out = self.gpu_module(input)
-            return out
+
+            self.gpu_forward_time.append(time.time() - start)
+            # return out
         else:
             assert(f'Resource: {resource}. Wrong resource')
-            """
+
+        # print(f'{self.name}: {resource}')
+        self.count += 1
+
+        # """
+        if self.count % 40 == 0:
+            with open('/media/bst/hdd/mirae/layer-par/main-pytorch/poster/vgg_256_mps40_test_t.csv', 'a') as f_object:
+                writer = csv.writer(f_object)
+                if len(self.cpu_copy_time) != 0:
+                    cpu_avg_copy = np.array([self.name, "BST GPU -> CPU Average copy", round(statistics.mean(self.cpu_copy_time[1:])*1000, 8), "ms"])
+                    writer.writerow(cpu_avg_copy)
+                    print(self._layer_idx, cpu_avg_copy)
+                    # print(self.cpu_copy_time)
+
+                if len(self.cpu_forward_time) != 0:
+                    cpu_avg_fw = np.array([self.name, "BST CPU Average FORWARD", round(statistics.mean(self.cpu_forward_time[1:])*1000, 8), "ms"])
+                    writer.writerow(cpu_avg_fw)
+                    # print(self._layer_idx, cpu_avg_fw)
+
+                if len(self.gpu_copy_time) != 0:
+                    gpu_avg_copy = np.array([self.name, "BST CPU -> GPU Average copy", round(statistics.mean(self.gpu_copy_time[1:])*1000, 8), "ms"])
+                    writer.writerow(gpu_avg_copy)
+                    print(self._layer_idx, gpu_avg_copy)
+                    # print(self.gpu_copy_time)
+
+                if len(self.gpu_forward_time) != 0:
+                    gpu_avg_fw = np.array([self.name, "BST GPU Average FORWARD", round(statistics.mean(self.gpu_forward_time[1:])*1000, 8), "ms"]) 
+                    writer.writerow(gpu_avg_fw)
+                    # print(self._layer_idx, gpu_avg_fw)
+
+        # """
+        """
+        if self.count % 300 == 0 and self.name == "Conv2d":
+            with open('/media/bst/hdd/mirae/layer-par/main-pytorch/yeji/all_batch32/vgg_100.csv', 'a') as f_object:
+                writer = csv.writer(f_object)
+                if len(self.gpu_forward_time) != 0:
+                    writer.writerows(map(lambda x: [x], list(np.round([1000 * i for i in self.gpu_forward_time[1:]], 8))))
+                    print(self.name, "GPU FORWARD", len(self.gpu_forward_time), "lines is writen")
+        """
+
+        return out
+    # '''
+
+    """
+    def forward(self, input):
+        # print(self)
+        ##### original #####
+        # resource = self.resource
+
+        # if not input.is_cuda and resource == RESOURCE_GPU:
+        #     input = input.cuda()
+        # if input.is_cuda and resource == RESOURCE_CPU:
+        #     input = input.cpu()
+
+        # if resource == RESOURCE_CPU:
+        #     out = self.cpu_module(input)
+        #     return out
+        # elif resource == RESOURCE_GPU:
+        #     out = self.gpu_module(input)
+        #     return out
+        # else:
+        #     assert(f'Resource: {resource}. Wrong resource')
+        ##### original #####
 
         start_copy=0
         end_copy=0
@@ -161,38 +240,38 @@ class Wrapper(Module):
         out=self.cpu_module(input_cpu)
         end_forward = time.time()
         #print("BST CPU FORWARD: {:.8f}".format(end_forward-start_forward))
-        self.cpu_forard_time.append(end_forward-start_forward)
+        self.cpu_forward_time.append(end_forward-start_forward)
         start_forward= time.time() 
         out=self.gpu_module(input_gpu)
         end_forward= time.time()
         #print("BST GPU FORWARD: {:.8f}".format(end_forward-start_forward))
-        self.gpu_forard_time.append(end_forward-start_forward)
-        self.count=self.count+1
-        if self.count==100:
+        self.gpu_forward_time.append(end_forward-start_forward)
+        self.count += 1
+        if self.count == 50:
            # print("layer inputsize CPU_copy CPU_forward GPU_copy GPU_forward")
-            for temp_i in range(100):
-                temp_cpu_copy_time=self.cpu_copy_time[temp_i]
-                temp_gpu_copy_time=self.gpu_copy_time[temp_i]
-                temp_cpu_forward_time=self.cpu_forard_time[temp_i]
-                temp_gpu_forward_time=self.gpu_forard_time[temp_i]
-                #print(self.name, ";", self.gpu_module, ";",self.input_size, ";"," {:.8f}".format(statistics.mean(self.cpu_copy_time[1:])*1000),";"," {:.8f}".format(statistics.mean(self.cpu_forard_time[1:])*1000), ";"," {:.8f}".format(statistics.mean(self.gpu_copy_time[1:])*1000), ";"," {:.8f}".format(statistics.mean(self.gpu_forard_time[1:])*1000), ";",input.shape)
-                #print("BST layer data ;", self.name, ";", self.gpu_module, ";",self.input_size, ";"," {:.8f}".format(temp_cpu_copy_time*1000),";"," {:.8f}".format(temp_cpu_forward_time*1000), ";"," {:.8f}".format(temp_gpu_copy_time*1000), ";"," {:.8f}".format(temp_gpu_forward_time*1000), ";",input.shape)
-            #for copy_temp in self.cpu_copy_time:
+            # for temp_i in range(100):
+                # temp_cpu_copy_time=self.cpu_copy_time[temp_i]
+                # temp_gpu_copy_time=self.gpu_copy_time[temp_i]
+                # temp_cpu_forward_time=self.cpu_forward_time[temp_i]
+                # temp_gpu_forward_time=self.gpu_forward_time[temp_i]
+                # print(self.name, ";", self.gpu_module, ";",self.input_size, ";"," {:.8f}".format(statistics.mean(self.cpu_copy_time[1:])*1000),";"," {:.8f}".format(statistics.mean(self.cpu_forard_time[1:])*1000), ";"," {:.8f}".format(statistics.mean(self.gpu_copy_time[1:])*1000), ";"," {:.8f}".format(statistics.mean(self.gpu_forard_time[1:])*1000), ";",input.shape)
+                # print("BST layer data ;", self.name, ";", self.gpu_module, ";",self.input_size, ";"," {:.8f}".format(temp_cpu_copy_time*1000),";"," {:.8f}".format(temp_cpu_forward_time*1000), ";"," {:.8f}".format(temp_gpu_copy_time*1000), ";"," {:.8f}".format(temp_gpu_forward_time*1000), ";",input.shape)
+            # for copy_temp in self.cpu_copy_time:
             #    print("cpu_copy_time", self.input_size, " {:.8f}".format(copy_temp))
-            with open('/media/bst/hdd/mirae/layer-par/layer-pytorch/test/default_baseline_taskset.csv', 'a') as f_object:
+            with open('/media/bst/hdd/mirae/layer-par/main-pytorch/poster/vgg_copy_test.csv', 'a') as f_object:
                 writer = csv.writer(f_object)
-                array_0 = np.array([self.name, "BST CPU Average copy", round(statistics.mean(self.cpu_copy_time[1:])*1000, 8)])
-                array_1 = np.array([self.name, "BST CPU Average FORWARD", round(statistics.mean(self.cpu_forard_time[1:])*1000, 8)])
-                array_2 = np.array([self.name, "BST GPU Average copy", round(statistics.mean(self.gpu_copy_time[1:])*1000, 8)])
-                array_3 = np.array([self.name, "BST GPU Average FORWARD", round(statistics.mean(self.gpu_forard_time[1:])*1000, 8)]) 
+                array_0 = np.array([self.name, 'BST GPU -> CPU Average copy', round(statistics.mean(self.cpu_copy_time[1:])*1000, 8)])
+                array_1 = np.array([self.name, 'BST CPU Average FORWARD', round(statistics.mean(self.cpu_forward_time[1:])*1000, 8)])
+                array_2 = np.array([self.name, 'BST CPU -> GPU Average copy', round(statistics.mean(self.gpu_copy_time[1:])*1000, 8)])
+                array_3 = np.array([self.name, 'BST GPU Average FORWARD', round(statistics.mean(self.gpu_forward_time[1:])*1000, 8)]) 
                 writer.writerow(array_0)
                 writer.writerow(array_1)
                 writer.writerow(array_2)
                 writer.writerow(array_3)
-            
-            print(self.name, "BST CPU Average copy: {:.8f}".format(statistics.mean(self.cpu_copy_time[1:])*1000))
-            print(self.name, "BST CPU Average FORWARD: {:.8f}".format(statistics.mean(self.cpu_forard_time[1:])*1000))
-            print(self.name, "BST GPU Average copy: {:.8f}".format(statistics.mean(self.gpu_copy_time[1:])*1000))
-            print(self.name, "BST GPU Average FORWARD: {:.8f}".format(statistics.mean(self.gpu_forard_time[1:])*1000))
-        return out
 
+            print(self.name, array_0)
+            print(self.name, array_1)
+            print(self.name, array_2)
+            print(self.name, array_3)
+        return out
+    """
