@@ -1,0 +1,22 @@
+FROM bst/pytorch-base:1.0
+
+RUN apt update
+RUN apt install vim -y
+
+WORKDIR /workspace/pytorch
+COPY . .
+
+RUN git submodule deinit -f .
+RUN git clean -xdf
+RUN python setup.py clean
+RUN git submodule update --init --recursive
+RUN python setup.py develop
+
+WORKDIR /workspace
+RUN git clone --branch release/0.9 https://github.com/pytorch/vision.git
+WORKDIR /workspace/vision
+RUN python setup.py install
+
+WORKDIR /workspace
+# additional tasks 
+# copy pytorch-cifar100 to docker

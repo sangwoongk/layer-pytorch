@@ -8,16 +8,17 @@ $(warning WARNING: No docker user found using results from whoami)
 DOCKER_ORG                = $(shell whoami)
 endif
 
-CUDA_VERSION              = 11.0
+CUDA_VERSION              = 11.4
 CUDNN_VERSION             = 8
 BASE_RUNTIME              = ubuntu:18.04
-BASE_DEVEL                = nvidia/cuda:$(CUDA_VERSION)-cudnn$(CUDNN_VERSION)-devel-ubuntu18.04
+BASE_DEVEL                = nvidia/cuda:$(CUDA_VERSION).0-cudnn$(CUDNN_VERSION)-devel-ubuntu18.04
 
 # The conda channel to use to install pytorch / torchvision
 INSTALL_CHANNEL           = pytorch
 
 PYTHON_VERSION            = 3.7
-PYTORCH_VERSION           = $(shell git describe --tags)
+#PYTORCH_VERSION           = $(shell git describe --tags)
+PYTORCH_VERSION           = $(shell git describe --always)
 # Can be either official / dev
 BUILD_TYPE                = dev
 BUILD_PROGRESS            = auto
