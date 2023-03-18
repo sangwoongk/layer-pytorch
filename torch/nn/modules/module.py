@@ -304,14 +304,24 @@ def khryu(self, input):
     '''
     # print(f'{self.name}: {self.resource}')
 
+    '''
     # copy overhead test
     if self._layer_idx % 2 == 1:
+        self.resource = RESOURCE_GPU
+    else:
+        self.resource = RESOURCE_CPU
+    '''
+
+    # '''
+    if self._layer_idx >= 25 and self._layer_idx <= 34:
         self.resource = RESOURCE_CPU
     else:
         self.resource = RESOURCE_GPU
-
-    # self.resource = turn
+    # '''
+ 
+    # self.resource = RESOURCE_GPU
     '''
+    self.resource = turn
     if turn == RESOURCE_CPU:
         turn = RESOURCE_GPU
     else:
@@ -790,7 +800,7 @@ class Module:
 
         Returns:
             Module: self
-        """
+        """ 
         return self._apply(lambda t: t.cuda(device))
 
     def xpu(self: T, device: Optional[Union[int, device]] = None) -> T:

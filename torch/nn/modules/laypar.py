@@ -120,31 +120,33 @@ class Wrapper(Module):
         resource = self.resource
 
         if not input.is_cuda and resource == RESOURCE_GPU:
-            start = time.time()
+            # start = time.time()
 
             input = input.cuda()
+            # input = input.to('cuda:0', non_blocking=True)
 
-            self.gpu_copy_time.append(time.time() - start)
+            # self.gpu_copy_time.append(time.time() - start)
         if input.is_cuda and resource == RESOURCE_CPU:
-            start = time.time()
+            # start = time.time()
 
             input = input.cpu()
+            # input = input.to('cpu', non_blocking=True)
 
-            self.cpu_copy_time.append(time.time() - start)
+            # self.cpu_copy_time.append(time.time() - start)
 
         if resource == RESOURCE_CPU:
-            start = time.time()
+            # start = time.time()
 
             out = self.cpu_module(input)
 
-            self.cpu_forward_time.append(time.time() - start)
+            # self.cpu_forward_time.append(time.time() - start)
             # return out
         elif resource == RESOURCE_GPU:
-            start = time.time()
+            # start = time.time()
 
             out = self.gpu_module(input)
 
-            self.gpu_forward_time.append(time.time() - start)
+            # self.gpu_forward_time.append(time.time() - start)
             # return out
         else:
             assert(f'Resource: {resource}. Wrong resource')
@@ -152,14 +154,14 @@ class Wrapper(Module):
         # print(f'{self.name}: {resource}')
         self.count += 1
 
-        # """
+        """
         if self.count % 40 == 0:
             with open('/media/bst/hdd/mirae/layer-par/main-pytorch/poster/vgg_256_mps40_test_t.csv', 'a') as f_object:
                 writer = csv.writer(f_object)
                 if len(self.cpu_copy_time) != 0:
                     cpu_avg_copy = np.array([self.name, "BST GPU -> CPU Average copy", round(statistics.mean(self.cpu_copy_time[1:])*1000, 8), "ms"])
                     writer.writerow(cpu_avg_copy)
-                    print(self._layer_idx, cpu_avg_copy)
+                    print(self._layer_idx, cpu_avg_copy, input.numel())
                     # print(self.cpu_copy_time)
 
                 if len(self.cpu_forward_time) != 0:
@@ -170,7 +172,7 @@ class Wrapper(Module):
                 if len(self.gpu_copy_time) != 0:
                     gpu_avg_copy = np.array([self.name, "BST CPU -> GPU Average copy", round(statistics.mean(self.gpu_copy_time[1:])*1000, 8), "ms"])
                     writer.writerow(gpu_avg_copy)
-                    print(self._layer_idx, gpu_avg_copy)
+                    print(self._layer_idx, gpu_avg_copy, input.numel())
                     # print(self.gpu_copy_time)
 
                 if len(self.gpu_forward_time) != 0:
