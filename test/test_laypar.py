@@ -69,7 +69,7 @@ else:
   exit(1)
 
 net.eval()
-cifar_path = '../../pytorch-cifar100/data'
+cifar_path = '../../pytorch-cifar10/data'
 # cifar_path = '/media/bst/hdd/mirae/layer-par/pytorch-cifar100/data'
 # imagenet_path = '/media/bst/hdd1/mirae/pytorch-imagenet/data'
 
@@ -87,7 +87,7 @@ else:
 
 transform_test = transforms.Compose(compose_list)
 # test_loader = DataLoader(CIFAR100Test(cifar_path, transform_test))
-cifar_test = torchvision.datasets.CIFAR100(root=cifar_path, train=False, download=False, transform=transform_test)
+cifar_test = torchvision.datasets.CIFAR10(root=cifar_path, train=False, download=True, transform=transform_test)
 # cifar_test = torchvision.datasets.ImageNet(root=imagenet_path, train=False, download=False, transform=transform_test)
 # test_loader = DataLoader(cifar_test, shuffle=True)
 
