@@ -1,0 +1,239 @@
+import torch
+import pickle
+from torch import nn
+import torch.nn.functional as F
+from torch.utils.data import Dataset
+from torch.utils.data import DataLoader
+import os
+import numpy as np
+import time
+import torchvision
+import torchvision.transforms as transforms
+from torchvision.models import *
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--gpu', '-g', action='store_true')
+parser.add_argument('--model', '-m', type=str, default='vgg')
+parser.add_argument('--iter', '-i', type=int, default=100)
+args = parser.parse_args()
+
+exec_on_gpu = args.gpu
+exec_model = args.model
+inference_iter = args.iter
+
+class CIFAR100Test(Dataset):
+  def __init__(self, path, transform=None):
+    with open(os.path.join(path, 'test'), 'rb') as cifar100:
+      self.data = pickle.load(cifar100, encoding='bytes')
+    self.transform = transform
+
+  def __len__(self):
+    return len(self.data['data'.encode()])
+
+  def __getitem__(self, index):
+    label = self.data['fine_labels'.encode()][index]
+    r = self.data['data'.encode()][index, :1024].reshape(32, 32)
+    g = self.data['data'.encode()][index, 1024:2048].reshape(32, 32)
+    b = self.data['data'.encode()][index, 2048:].reshape(32, 32)
+    image = np.dstack((r, g, b))
+
+    if self.transform:
+      image = self.transform(image)
+
+    return label, image
+
+def generate_input(batch_size, shape):
+    input_shape = [batch_size] + shape
+    x = torch.randn(input_shape)
+    return x
+
+""" failed models """
+# [googlenet, resnet18, inception_v3]
+
+""" successful models """
+# [vgg11, mobilenet_v2, densenet121, squeezenet1_0, mnasnet0_5, shufflenet_v2_x0_5, alexnet]
+
+net = None
+if exec_model == 'vgg':
+  net = vgg19(pretrained=True)
+elif exec_model == 'mobi':
+  net = mobilenet_v2(pretrained=True)
+elif exec_model == 'dense':
+  net = densenet121(pretrained=True)
+elif exec_model == 'squeeze':
+  net = squeezenet1_0(pretrained=True)
+elif exec_model == 'mnas':
+  net = mnasnet0_5(pretrained=True)
+elif exec_model == 'shuffle':
+  net = shufflenet_v2_x0_5(pretrained=True)
+elif exec_model == 'alex':
+  net = alexnet(pretrained=True)  # add transforms.Resize() to transforms.Compose
+else:
+  print('Enter correct model name!')
+  exit(1)
+
+net.eval()
+
+if net._get_name() == 'AlexNet':
+  compose_list = [
+    transforms.Resize(224),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.507, 0.486548, 0.44091], std=[0.2673, 0.25643, 0.27615])
+  ]
+else:
+  compose_list = [
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.507, 0.486548, 0.44091], std=[0.2673, 0.25643, 0.27615])
+  ]
+
+# transform_test = transforms.Compose(compose_list)
+# test_loader = DataLoader(CIFAR100Test(cifar_path, transform_test))
+# cifar_test = torchvision.datasets.CIFAR10(root=cifar_path, train=False, download=True, transform=transform_test)
+# cifar_test = torchvision.datasets.ImageNet(root=imagenet_path, train=False, download=False, transform=transform_test)
+# test_loader = DataLoader(cifar_test, shuffle=True)
+
+correct_1 = 0.0
+correct_5 = 0.0
+latency = []
+
+
+with torch.no_grad():
+    if exec_on_gpu:
+        net.to('cuda:0')
+    else:
+        net.hetero()
+
+    for i in range(inference_iter):
+        # imagenet input shape
+        x = generate_input(batch_size=32, shape=[3, 224, 224])
+
+        if exec_on_gpu:
+            x = x.cuda()
+        else:   # hetero
+            x = x.cuda()
+
+        start = time.time()
+        output = net(x)
+        end = time.time()
+        lat = (end - start) * 1000
+
+        print(lat)
+
+        if i != 0:
+            latency.append(lat)
+
+    if exec_on_gpu:
+        print('===== Execute on GPU =====')
+    else:
+        print('===== hetero =====')
+
+    print(f'===== model: {net._get_name()} =====')
+    print(f'Average latency: {np.average(latency)}ms')
+    print(f'Median latency: {np.median(latency)}ms')
+    print(f'P95 latency: {np.percentile(latency, 95)}ms')
+    print(f'P99 latency: {np.percentile(latency, 99)}ms')
+    latency.clear()
+
+
+
+'''
+with torch.no_grad():
+  if exec_on_gpu:
+    net.to('cuda:0')
+  else:
+    net.hetero()
+
+  while True:
+    #test_loader = DataLoader(cifar_test, shuffle=True, batch_size=256)
+    print(f'total iterations: {len(test_loader)}')
+    for n_iter, (image, label) in enumerate(test_loader):
+      # print('iteration: {}\ttotal {} iterations'.format(n_iter, len(test_loader)))
+
+      # for gpu-only execution
+      if exec_on_gpu:
+        image = image.cuda()
+        label = label.cuda()
+      else:
+        image = image.cuda()
+        label = label.cuda()
+
+      # net.sched_layer({})
+
+      start = time.time()
+      output = net(image)
+      end = time.time()
+      lat = (end - start) * 1000
+
+      out_location = output.get_device()
+      img_location = image.get_device()
+      label_location = label.get_device()
+
+      if out_location >= 0:
+        output = output.cpu()
+      if img_location >= 0:
+        image = image.cpu()
+      if label_location >= 0:
+        label = label.cpu()
+
+      # print('iteration: {}\telapsed time: {}ms'.format(n_iter, lat))
+      # if n_iter % 100 == 0:
+      #   print('iteration: {}\telapsed time: {}ms'.format(n_iter, lat))
+
+      # first latency is high -> exclude
+      if n_iter != 0:
+        latency.append(lat)
+        _, pred = output.topk(5, 1, largest=True, sorted=True)
+
+        label = label.view(label.size(0), -1).expand_as(pred)
+        correct = pred.eq(label).float()
+
+        correct_5 += correct[:, :5].sum()
+        correct_1 += correct[:, :1].sum()
+
+      # if n_iter == 50:
+        # break
+
+      #if n_iter == inference_iter:
+      #  break
+
+    if exec_on_gpu:
+      print('==== Eecute on GPU ====')
+    else:
+      print('==== hetero() ====')
+    print(f'==== model: {net._get_name()} ====')
+
+    print('Average latency: {}ms'.format(np.average(latency)))
+    print('Median latency: {}ms'.format(np.median(latency)))
+    print('P95 latency: {}ms'.format(np.percentile(latency, 95)))
+    print('P99 latency: {}ms'.format(np.percentile(latency, 99)))
+    latency.clear()
+'''
+
+'''
+print('Top 1 err: ', 1 - correct_1 / len(test_loader.dataset))
+print('Top 5 err: ', 1 - correct_5 / len(test_loader.dataset))
+
+class LeNet(nn.Module):
+  def __init__(self):
+    super(LeNet, self).__init__()
+    # 1 input image channel, 6 output channels, 3x3 square conv kernel
+    self.conv1 = nn.Conv2d(1, 6, 3)
+    self.conv2 = nn.Conv2d(6, 16, 3)
+    self.fc1 = nn.Linear(16 * 5 * 5, 120)
+    self.fc2 = nn.Linear(120, 84)
+    self.fc3 = nn.Linear(84, 10)
+
+  def forward(self, x):
+    x = F.max_pool2d(F.relu(self.conv1(x)), (2, 2))
+    x = F.max_pool2d(F.relu(self.conv2(x)), (2, 2))
+    x = x.view(-1, int(x.nelement() / x.shape[0]))
+    x = F.relu(self.fc1(x))
+    x = F.relu(self.fc2(x))
+    x = self.fc3(x)
+    return x
+
+model = LeNet()
+model.eval()
+model.hetero()
+'''
